@@ -1,13 +1,18 @@
 import { useDispatch, useSelector } from "react-redux";
 import { toogleMenu } from "../utils/appSlice";
 import { useEffect, useState } from "react";
-import { YOUTUBE_SEARCH_URL } from "../utils/constants";
+import {
+  GOOGLE_API_KEY,
+  YOUTUBE_SEARCH,
+  YOUTUBE_SEARCH_URL,
+} from "../utils/constants";
+import { searchResults } from "../utils/searchSlice";
+import { addVideos, removeVideos } from "../utils/videoSlice";
 
 const Header = () => {
   const [searchText, setSearchText] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
   const dispatch = useDispatch();
   const searchCache = useSelector((store) => store.search);
 
@@ -29,11 +34,28 @@ const Header = () => {
     };
   }, [searchText]);
 
+  const getSearchResults = async () => {
+    dispatch(removeVideos());
+    const data = await fetch(
+      YOUTUBE_SEARCH + searchText + "&key=" + GOOGLE_API_KEY
+    );
+    const json = await data.json();
+    dispatch(addVideos(json.items));
+  };
+
   const changeSearchText = async () => {
     const data = await fetch(YOUTUBE_SEARCH_URL + searchText);
     const json = await data.json();
     setSuggestions(json[1]);
+    dispatch(searchResults({ [searchText]: json[1] }));
   };
+
+  const handleClick = (s) => {
+    console.log("value of search "+s);
+    
+    setSearchText(s);
+    setShowSuggestions(false);
+  }
 
   return (
     <div className="grid grid-flow-col shadow-lg m-2">
@@ -60,23 +82,33 @@ const Header = () => {
             setSearchText(e.target.value);
           }}
           onFocus={() => setShowSuggestions(true)}
-          onBlur={() => setShowSuggestions(false)}
+          // onBlur={() => setShowSuggestions(false)}
         />
 
-        <button className=" rounded-r-full py-2 px-5 border border-gray-400 bg-gray-200">
+        <button
+          className=" rounded-r-full py-2 px-5 border border-gray-400 bg-gray-200"
+          onClick={() => {
+            getSearchResults();
+          }}
+        >
           🔍
         </button>
         {showSuggestions && (
-          <div className="fixed ml-[250px] bg-white w-[34rem] px-2 py-2 shadow-lg border border-gray-100">
+          <div className="fixed ml-[250px] bg-white w-[34rem] px-2 py-2 shadow-lg border border-gray-100" onClick={() => {
+            console.log("click on div")
+          }}>
             <ul>
-              {suggestions.map((s) => (
-                <li
-                  key={s}
-                  className="text-left px-2 py-3 shadow-sm hover:bg-gray-100"
-                >
+              {suggestions.map((s,ind) => {
+                return  <li
+                    className="text-left px-2 py-3 shadow-sm hover:bg-gray-100 cursor-pointer"
+                    key={s+"_"+ind}
+                    onClick={() => {
+                      handleClick(s)
+                    }} 
+                    >
                   {s}
                 </li>
-              ))}
+              })}
             </ul>
           </div>
         )}
